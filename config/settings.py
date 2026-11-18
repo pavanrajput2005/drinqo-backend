@@ -40,7 +40,9 @@ if os.getenv("PYTHON_DOTENV_DISABLED") != "1":
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes"}
+# DEBUG:  "true"/"1"/"yes" → True ; anything else (including "false"/"0"/"no") → False
+_DEBUG_STR = os.getenv("DJANGO_DEBUG", "True").strip().lower()
+DEBUG = _DEBUG_STR in {"true", "1", "yes"}
 DJANGO_ENVIRONMENT = os.getenv(
     "DJANGO_ENVIRONMENT",
     "development" if DEBUG else "production",
@@ -182,6 +184,12 @@ ALLOWED_HOSTS = [
 if not DEBUG:
     _env_hosts = os.getenv("ALLOWED_HOSTS", "")
     ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(",") if h.strip()]
+    if not ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            "ALLOWED_HOSTS must be set when DEBUG is False. "
+            "Set the ALLOWED_HOSTS environment variable to a comma‑separated list of host names, "
+            "e.g. ALLOWED_HOSTS=drinqo-backend.onrender.com,localhost,127.0.0.1"
+        )
 
 # ============================================================
 # APPLICATIONS
