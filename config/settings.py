@@ -263,6 +263,7 @@ MIDDLEWARE = [
 # ============================================================
 
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5500",
     "http://localhost:62806",
     "http://127.0.0.1:62806",
 ]
@@ -276,7 +277,17 @@ if DJANGO_ENVIRONMENT == "production":
     ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if host.strip()]
     if not ALLOWED_HOSTS or any("*" in host or "/" in host or host.startswith(".") for host in ALLOWED_HOSTS):
         raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to explicit hostnames, without schemes or paths.")
-    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+    # Base origins that are always allowed for private staging (Flutter web at localhost:5500,
+    # and the existing dev origins).  These are combined with any origins supplied via
+    # the DJANGO_CORS_ALLOWED_ORIGINS environment variable so that production can
+    # whitelist its own domain while still permitting the staging origin.
+    _staging_origins = [
+        "http://localhost:5500",
+        "http://localhost:62806",
+        "http://127.0.0.1:62806",
+    ]
+    _env_origins = [o.strip() for o in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_staging_origins + _env_origins))  # deduplicate
     CORS_ALLOWED_ORIGIN_REGEXES = []
     CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT = True
