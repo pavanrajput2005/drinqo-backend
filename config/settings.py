@@ -293,6 +293,8 @@ TEMPLATES = [
 # DATABASE
 # ============================================================
 
+DATABASES = {}
+
 if os.getenv("DATABASE_URL"):
     # Render (and many other platforms) provide a full PostgreSQL URL.
     DATABASES["default"] = dj_database_url.config(
