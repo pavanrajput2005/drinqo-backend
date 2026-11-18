@@ -1,0 +1,43 @@
+﻿.env
+.env.*
+!.env.example
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+*.sqlite3
+*.log
+media/
+private_media/
+private_shop_licenses/
+staticfiles/
+firebase-service-account*.json
+*service-account*.json
+*.pem
+*.key
+*.p12
+*.p8
+.vscode/
+.idea/
+cloudflared.exe
+*.bak
+*.bak2
+tools/test_runs/
+
+# Database backups
+backups/
+*.backup
+*.dump
+*.sql
+
+# Temporary Flutter patches
+drinqo_shop_admin_patch/
+drinqo_shop_admin_patch.zip
+
+# Other sensitive files
+*.db
+*.sqlite
+*.sqlite3
+*.zip
