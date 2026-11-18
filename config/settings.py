@@ -16,6 +16,8 @@ import os
 import re
 import warnings
 
+import dj_database_url
+
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
@@ -176,6 +178,11 @@ ALLOWED_HOSTS = [
     "https://*.trycloudflare.com",
 ]
 
+# Production: honour ALLOWED_HOSTS from the environment; for local dev keep the hard‑coded list.
+if not DEBUG:
+    _env_hosts = os.getenv("ALLOWED_HOSTS", "")
+    ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(",") if h.strip()]
+
 # ============================================================
 # APPLICATIONS
 # ============================================================
@@ -214,6 +221,7 @@ AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -285,8 +293,15 @@ TEMPLATES = [
 # DATABASE
 # ============================================================
 
-DATABASES = {
-    "default": {
+if os.getenv("DATABASE_URL"):
+    # Render (and many other platforms) provide a full PostgreSQL URL.
+    DATABASES["default"] = dj_database_url.config(
+        conn_max_age=600,
+        ssl_require=True,
+    )
+else:
+    # Fall back to individual environment variables for local development.
+    DATABASES["default"] = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME"),
         "USER": os.getenv("DB_USER"),
@@ -294,7 +309,6 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "5432"),
     }
-}
 
 
 # ============================================================
@@ -346,7 +360,20 @@ USE_TZ = True
 # STATIC FILES
 # ============================================================
 
+# Django 6+ recommends using the STORAGES dict; this preserves the existing
+# default storage backend (FileSystemStorage) while Whitenoise serves static
+# files in production.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+# Keep STATIC_URL for convenience; Whitenoise will serve under this prefix.
 STATIC_URL = "static/"
+# When WHITENOISE is used, STATIC_ROOT is still required for collectstatic.
 STATIC_ROOT = BASE_DIR / "staticfiles"
 if os.getenv("DJANGO_MEDIA_ROOT"):
     MEDIA_ROOT = os.environ["DJANGO_MEDIA_ROOT"]
