@@ -150,7 +150,13 @@ DJANGO_CACHE_LOCATION = os.getenv(
     "DJANGO_CACHE_LOCATION",
     "drinqo-default-cache",
 )
-if DJANGO_ENVIRONMENT == "production" and (
+# When a REDIS_URL is supplied (e.g. by Render), use the Redis-backed cache;
+# otherwise fall back to the local memory cache for development.
+REDIS_URL = os.getenv("REDIS_URL")
+
+# Production guard: raise only when we are in production without a Redis URL
+# and the cache backend is still the local memory cache.
+if (DJANGO_ENVIRONMENT == "production") and (not REDIS_URL) and (
     not os.getenv("DJANGO_CACHE_BACKEND")
     or not os.getenv("DJANGO_CACHE_LOCATION")
     or DJANGO_CACHE_BACKEND.endswith(
@@ -162,12 +168,23 @@ if DJANGO_ENVIRONMENT == "production" and (
         "backend and location for API throttling."
     )
 
-CACHES = {
-    "default": {
-        "BACKEND": DJANGO_CACHE_BACKEND,
-        "LOCATION": DJANGO_CACHE_LOCATION,
+# Apply Redis cache if the env‑var is present (takes precedence over the
+# local‑memory default).  This lets Render (and other platforms) provide a
+# shared Redis instance while keeping local development unchanged.
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": DJANGO_CACHE_BACKEND,
+            "LOCATION": DJANGO_CACHE_LOCATION,
+        }
+    }
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
